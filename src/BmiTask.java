@@ -7,7 +7,7 @@ public class BmiTask {
         String output = "";
         float solution = 0;
 
-        while(solution==0) {
+        while (solution == 0) {
             input1 = JOptionPane.showInputDialog("Gib dein Körpergewicht an:");
             if (input1 == null) {
                 break;

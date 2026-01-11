@@ -6,7 +6,7 @@ public class WürfelTask {
         myRand1 = Math.random() * max1;
         System.out.println(Math.round(myRand1));
 
-        for (int i = 0; i < 1000; i++ ) {
+        for (int i = 0; i < 1000; i++) {
             double myRand2, min2 = 1, max2 = 5;
             myRand2 = Math.random() * max2;
             System.out.println(Math.round(myRand2 + min2));
