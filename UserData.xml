@@ -1,0 +1,3 @@
+	<user name="lnk">
+		<password algorithm="bcrypt">jk</password>
+	</user>
