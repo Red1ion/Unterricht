@@ -1,6 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,40 +7,51 @@ import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Login {
-    static void main() throws Exception {
+
+    public interface LoginResultListener {
+        void onLoginSuccess(String username);
+    }
+
+    private final LoginResultListener listener;
+
+    public Login(LoginResultListener listener) {
+        this.listener = listener;
+    }
+
+    // Das ist die Methode, die du von außen aufrufst (z.B. aus LoginWindow)
+    public static String open(LoginResultListener listener) {
         SwingUtilities.invokeLater(() -> {
             try {
-                new Login().createAndShowGui();
+                new Login(listener).createAndShowGui();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
+        return null;
     }
 
-    static Path FilePath() {
+    static Path filePath() {
         return Paths.get("UserData.xml");
     }
 
     private void createAndShowGui() throws Exception {
 
-        final String[] RegisterUsername = {""};
+        final String[] registerUsername = {""};
+        final boolean[] usernameExist = {true};
 
-        final boolean[] UsernameExist = {true};
+        AtomicReference<String> checkUsernames = new AtomicReference<>("");
 
-        AtomicReference<String> CheckUsernames = new AtomicReference<>();
-
-        if (Files.exists(FilePath())) {
-            CheckUsernames.set(Files.readString(FilePath()));
+        if (Files.exists(filePath())) {
+            checkUsernames.set(Files.readString(filePath()));
         }
 
         JFrame frame = new JFrame("Login Window");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.setSize(400, 150);
         frame.setLocationRelativeTo(null);
 
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(3, 2, 10, 10)); // 3 Zeilen, 2 Spalten, Abstand 10px
-        
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+
         panel.add(new JLabel("Username:"));
         JTextField usernameField = new JTextField();
         panel.add(usernameField);
@@ -57,101 +67,103 @@ public class Login {
         panel.add(buttonRegister);
 
         buttonRegister.addActionListener(e -> {
-            RegisterUsername[0] = usernameField.getText();
+            registerUsername[0] = usernameField.getText();
 
-            if (Files.exists(FilePath())) {
+            if (Files.exists(filePath())) {
                 try {
-                    CheckUsernames.set(Files.readString(Paths.get("UserData.xml")));
+                    checkUsernames.set(Files.readString(filePath()));
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
             } else {
-                CheckUsernames.set("");
-            }
-            
-            try {
-                if (CheckUsernames.get().toLowerCase().contains("name=\"" + RegisterUsername[0].toLowerCase() + "\"") || RegisterUsername[0].isEmpty()) {
-                    UsernameExist[0] = true;
-                    JOptionPane.showMessageDialog(frame, "Username already exist!");
-                } else {
-                    UsernameExist[0] = false;
-                }
-            } catch (Exception a) {
-                UsernameExist[0] = false;
+                checkUsernames.set("");
             }
 
-            if (!UsernameExist[0]) {
-                String RegisterPassword = passwordField.getText();
-                
-                if (Files.exists(FilePath())) {
-                    String xml = null;
-                    
+            try {
+                if (checkUsernames.get().toLowerCase().contains("name=\"" + registerUsername[0].toLowerCase() + "\"")
+                        || registerUsername[0].isEmpty()) {
+                    usernameExist[0] = true;
+                    JOptionPane.showMessageDialog(frame, "Username already exist!");
+                } else {
+                    usernameExist[0] = false;
+                }
+            } catch (Exception a) {
+                usernameExist[0] = false;
+            }
+
+            if (!usernameExist[0]) {
+                String registerPassword = new String(passwordField.getPassword());
+
+                if (Files.exists(filePath())) {
+                    String xml;
                     try {
-                        xml = Files.readString(FilePath());
+                        xml = Files.readString(filePath());
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
                     }
-                    
+
                     String endTag = "</users>";
-                    
                     int idx = xml.lastIndexOf(endTag);
-                    
                     if (idx < 0) throw new IllegalStateException("no Root-Endtag found");
 
-                    String newUser = "\t<user name=\"" + RegisterUsername[0] + "\">\n" +
-                            "\t\t<password algorithm=\"bcrypt\">" + RegisterPassword + "</password>\n" +
-                            "\t</user>\n";
+                    String newUser =
+                            "\t<user name=\"" + registerUsername[0] + "\">\n" +
+                                    "\t\t<password algorithm=\"bcrypt\">" + registerPassword + "</password>\n" +
+                                    "\t</user>\n";
 
                     String out = xml.substring(0, idx) + newUser + endTag;
 
                     try {
-                        Files.writeString(FilePath(), out);
+                        Files.writeString(filePath(), out);
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
                     }
-                    
-                    JOptionPane.showMessageDialog(frame, "Successfuly signed up");
+
+                    JOptionPane.showMessageDialog(frame, "Successfully signed up");
 
                 } else {
-                    
-                    String UserDataText = "<users>\n" +
-                            "\t<user name=\"" + RegisterUsername[0] + "\">\n" +
-                            "\t\t<password algorithm=\"bcrypt\">" + RegisterPassword + "</password>\n" +
-                            "\t</user>\n" +
-                            "</users>";
+                    String userDataText =
+                            "<users>\n" +
+                                    "\t<user name=\"" + registerUsername[0] + "\">\n" +
+                                    "\t\t<password algorithm=\"bcrypt\">" + registerPassword + "</password>\n" +
+                                    "\t</user>\n" +
+                                    "</users>";
 
                     try {
-                        Files.write(FilePath(), UserDataText.getBytes());
+                        Files.writeString(filePath(), userDataText);
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
                     }
 
-                    JOptionPane.showMessageDialog(frame, "Successfuly signed up");
-
+                    JOptionPane.showMessageDialog(frame, "Successfully signed up");
                 }
             }
         });
 
         buttonLogin.addActionListener(e -> {
+            String loginUsername = usernameField.getText();
+            String loginPassword = new String(passwordField.getPassword());
 
-            String LoginUsername = usernameField.getText();
-            String LoginPassword = passwordField.getText();
-
-            if (Files.exists(FilePath())) {
+            if (Files.exists(filePath())) {
                 try {
-                    CheckUsernames.set(Files.readString(FilePath()));
+                    checkUsernames.set(Files.readString(filePath()));
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
             }
 
-            if (CheckUsernames.get().contains("\t<user name=\"" + LoginUsername + "\">\n\t\t<password algorithm=\"bcrypt\">" + LoginPassword + "</password>")) {
-                JOptionPane.showMessageDialog(frame,"Login successfully");
+            boolean ok = checkUsernames.get().contains(
+                    "\t<user name=\"" + loginUsername + "\">\n\t\t<password algorithm=\"bcrypt\">" + loginPassword + "</password>");
 
-            } else if (!Files.exists(FilePath())) {
-                JOptionPane.showMessageDialog(frame, "Incorrect username or password.");
+            if (ok) {
+                JOptionPane.showMessageDialog(frame, "Login successfully");
+
+                if (listener != null) {
+                    listener.onLoginSuccess(loginUsername);
+                }
+                frame.dispose();
             } else {
-                JOptionPane.showMessageDialog(frame,"Incorrect username or password.");
+                JOptionPane.showMessageDialog(frame, "Incorrect username or password.");
             }
         });
 

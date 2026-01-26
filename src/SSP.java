@@ -24,6 +24,8 @@ public class SSP {
                     System.out.println("Du hast Papier gewählt!");
                     break;
 
+                default:
+                    break;
             }
 
             Random r = new Random();
@@ -40,6 +42,9 @@ public class SSP {
 
                 case 3:
                     System.out.println("Der Pc hat Papier gewählt!");
+                    break;
+
+                default:
                     break;
 
             }
